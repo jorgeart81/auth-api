@@ -8,7 +8,6 @@ namespace AuthApi.Controllers;
 [Route("api/users")]
 public class Users
 {
-
     [HttpGet]
     public IEnumerable<User> Get()
     {
