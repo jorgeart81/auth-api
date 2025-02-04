@@ -1,7 +1,7 @@
 using AuthApi;
 
 var builder = WebApplication.CreateBuilder(args);
-var startup = new Startup();
+var startup = new Startup(builder.Configuration);
 
 startup.ConfigureServices(builder.Services);
 
