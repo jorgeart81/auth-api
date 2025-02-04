@@ -1,6 +1,12 @@
+using AuthApi;
+
 var builder = WebApplication.CreateBuilder(args);
+var startup = new Startup();
+
+startup.ConfigureServices(builder.Services);
+
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+startup.Configure(app);
 
 app.Run();
