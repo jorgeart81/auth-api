@@ -1,6 +1,7 @@
 using System;
 using AuthApi.Data;
 using AuthApi.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ namespace AuthApi.Controllers;
 
 [ApiController]
 [Route("api/users")]
+[Authorize]
 public class Students(ApplicationDbContext context) : ControllerBase
 {
     [HttpGet]
@@ -50,7 +52,7 @@ public class Students(ApplicationDbContext context) : ControllerBase
     {
         var recordsDeleted = await context.Students.Where(x => x.Id == id).ExecuteDeleteAsync();
 
-        if (recordsDeleted == 0 ) return NotFound($"User with id ${id} not found");
+        if (recordsDeleted == 0) return NotFound($"User with id ${id} not found");
 
         return NoContent();
     }

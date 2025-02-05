@@ -40,7 +40,8 @@ public class Startup(IConfiguration configuration)
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ClockSkew = TimeSpan.Zero,
             };
         });
     }
@@ -51,6 +52,7 @@ public class Startup(IConfiguration configuration)
         app.UseHttpsRedirection();
         app.UseRouting();
 
+        app.UseAuthorization();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
 
     }
