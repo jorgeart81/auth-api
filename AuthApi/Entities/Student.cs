@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AuthApi.Entities;
 
-public class User
+public class Student
 {
     public int Id { get; set; }
 

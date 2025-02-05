@@ -1,14 +1,15 @@
 using System;
 using AuthApi.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthApi.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext
 {
     public ApplicationDbContext(DbContextOptions options) : base(options)
     {
     }
 
-    public DbSet<User> Users { get; set; }
+    public DbSet<Student> Students { get; set; }
 }
