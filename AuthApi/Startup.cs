@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using AuthApi.Data;
+using AuthApi.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,7 +11,7 @@ namespace AuthApi;
 
 public class Startup(IConfiguration configuration)
 {
-    private string? defaultConnection = configuration.GetConnectionString("DefaultConnection");
+    private readonly string? defaultConnection = configuration.GetConnectionString("DefaultConnection");
     private readonly string jwtKey = configuration["JWTKey"] ?? GenerateRandomKey();
 
     public void ConfigureServices(IServiceCollection services)
@@ -30,6 +31,8 @@ public class Startup(IConfiguration configuration)
         services.AddScoped<UserManager<IdentityUser>>();
         services.AddScoped<SignInManager<IdentityUser>>();
         services.AddHttpContextAccessor();
+
+        services.AddScoped<IJWTService, JWTService>();
 
         services.AddAuthentication().AddJwtBearer(options =>
         {

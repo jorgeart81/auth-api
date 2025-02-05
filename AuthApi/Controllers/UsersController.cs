@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AuthApi.DTOs;
+using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IJWTService jWTService) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -73,29 +74,16 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
     private async Task<AuthenticationResponseDTO> BuildToken(UserCredentialsDTO userCredentials, double minutes = 10080)
     {
-        var jwtKey = configuration["JWTKey"];
-        if (jwtKey == null) return new AuthenticationResponseDTO() { Token = null };
-
         var user = await userManager.FindByEmailAsync(userCredentials.Email);
+
         if (user == null) return new AuthenticationResponseDTO() { Token = null };
 
-        var claims = new List<Claim>()
-        {
-            new Claim("email", userCredentials.Email)
-        };
-        var claimsDb = await userManager.GetClaimsAsync(user);
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiration = DateTime.UtcNow.AddMinutes(minutes);
-
-        claims.AddRange(claimsDb);
-
-        var securityToken = new JwtSecurityToken(issuer: null, audience: null, claims: claims, expires: expiration, signingCredentials: creds);
+        var (Token, Expiration) = await jWTService.GenerateToken(user);
 
         return new AuthenticationResponseDTO()
         {
-            Token = new JwtSecurityTokenHandler().WriteToken(securityToken),
-            Expiration = expiration
+            Token = new JwtSecurityTokenHandler().WriteToken(Token),
+            Expiration = Expiration
         };
     }
 
