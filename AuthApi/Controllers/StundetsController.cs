@@ -1,8 +1,6 @@
-using System;
 using AuthApi.Data;
 using AuthApi.Entities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

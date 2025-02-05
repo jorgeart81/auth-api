@@ -1,4 +1,3 @@
-using System;
 using AuthApi.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
