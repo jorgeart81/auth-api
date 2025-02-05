@@ -13,13 +13,13 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, IConfiguration configuration) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Register(UserCredentialsDTO credentialsDTO)
     {
-        if (credentialsDTO.Password == null) return BadRequest();
+        if (credentialsDTO.Password == null) return IncorrectLoginReturn();
 
         var user = new IdentityUser
         {
@@ -41,6 +41,34 @@ public class UsersController(UserManager<IdentityUser> userManager, IConfigurati
 
             return ValidationProblem();
         }
+    }
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthenticationResponseDTO>> Login(UserCredentialsDTO credentialsDTO)
+    {
+        if (credentialsDTO.Password == null) return IncorrectLoginReturn();
+
+        var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
+
+        if (user is null) return IncorrectLoginReturn();
+
+        var result = await signInManager.CheckPasswordSignInAsync(user, credentialsDTO.Password, lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            return await BuildToken(credentialsDTO);
+        }
+        else
+        {
+            return IncorrectLoginReturn();
+        }
+    }
+
+    private ActionResult IncorrectLoginReturn()
+    {
+        ModelState.AddModelError(string.Empty, "Incorrect login");
+        return ValidationProblem();
     }
 
     private async Task<AuthenticationResponseDTO> BuildToken(UserCredentialsDTO userCredentials, double minutes = 10080)
