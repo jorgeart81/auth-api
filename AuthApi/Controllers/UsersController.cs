@@ -19,12 +19,13 @@ public class UsersController(UserManager<IdentityUser> userManager, IConfigurati
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Register(UserCredentialsDTO credentialsDTO)
     {
+        if (credentialsDTO.Password == null) return BadRequest();
+
         var user = new IdentityUser
         {
             UserName = credentialsDTO.Email,
             Email = credentialsDTO.Email,
         };
-
         var result = await userManager.CreateAsync(user, credentialsDTO.Password);
 
         if (result.Succeeded)
@@ -40,7 +41,6 @@ public class UsersController(UserManager<IdentityUser> userManager, IConfigurati
 
             return ValidationProblem();
         }
-
     }
 
     private async Task<AuthenticationResponseDTO> BuildToken(UserCredentialsDTO userCredentials, double minutes = 10080)
