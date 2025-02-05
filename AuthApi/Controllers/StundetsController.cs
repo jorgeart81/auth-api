@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AuthApi.Controllers;
 
 [ApiController]
-[Route("api/users")]
+[Route("api/students")]
 [Authorize]
 public class Students(ApplicationDbContext context) : ControllerBase
 {
