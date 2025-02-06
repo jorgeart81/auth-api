@@ -31,7 +31,7 @@ public class Startup(IConfiguration configuration)
         services.AddScoped<SignInManager<IdentityUser>>();
         services.AddHttpContextAccessor();
 
-        services.AddTransient<IJWTService, JWTService>();
+        services.AddTransient<IJwtService, JwtService>();
 
         services.AddAuthentication().AddJwtBearer(options =>
         {

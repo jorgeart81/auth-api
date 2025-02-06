@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace AuthApi.Services;
 
-public class JWTService(IConfiguration configuration, UserManager<IdentityUser> userManager) : IJWTService
+public class JwtService(IConfiguration configuration, UserManager<IdentityUser> userManager) : IJwtService
 {
     private readonly string? jwtKey = configuration["JWTKey"];
     private const double jwtExpiration = 30; // minutes
