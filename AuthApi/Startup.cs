@@ -11,7 +11,7 @@ namespace AuthApi;
 public class Startup(IConfiguration configuration)
 {
     private readonly string? defaultConnection = configuration.GetConnectionString("DefaultConnection");
-    private readonly string jwtKey = configuration["JWTKey"] ?? GenerateRandomKey();
+    private readonly string jwtKey = configuration["Jwt:Key"] ?? GenerateRandomKey();
 
     public void ConfigureServices(IServiceCollection services)
     {

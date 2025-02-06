@@ -8,9 +8,9 @@ namespace AuthApi.Services;
 
 public class JwtService(IConfiguration configuration, UserManager<IdentityUser> userManager) : IJwtService
 {
-    private readonly string? jwtKey = configuration["JWTKey"];
-    private const double jwtExpiration = 30; // minutes
-    private const double jwtRefreshExpiration = 10080; // 7 days
+    private readonly string? jwtKey = configuration["Jwt:Key"];
+    private readonly double jwtExpiration = Convert.ToDouble(configuration["Jwt:Expiration"]);
+    private readonly double jwtRefreshExpiration = Convert.ToDouble(configuration["Jwt:RefreshExpiration"]);
 
     public async Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user)
     {

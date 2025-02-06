@@ -27,7 +27,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (result.Succeeded)
         {
-            return await BuildToken(user.Email);
+            return await BuildAuthenticationResponse(user.Email);
         }
         else
         {
@@ -55,7 +55,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (result.Succeeded)
         {
-            return await BuildToken(user.Email);
+            return await BuildAuthenticationResponse(user.Email);
         }
         else
         {
@@ -80,7 +80,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (user?.Email is null) return Unauthorized();
 
-        return await BuildToken(email: user.Email, cookieToken: refreshToken);
+        return await BuildAuthenticationResponse(email: user.Email, cookieToken: refreshToken);
     }
 
 
@@ -90,7 +90,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         return ValidationProblem();
     }
 
-    private async Task<AuthenticationResponseDTO> BuildToken(string email, double minutes = 10080, string? cookieToken = null)
+    private async Task<AuthenticationResponseDTO> BuildAuthenticationResponse(string email, double minutes = 10080, string? cookieToken = null)
     {
         var user = await userManager.FindByEmailAsync(email);
 
@@ -98,25 +98,27 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         var (token, expiration) = await jWTService.GenerateToken(user);
 
-        if (string.IsNullOrWhiteSpace(cookieToken))
-        {
-            var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
-            cookieToken = refreshToken;
-        }
-
-        Response.Cookies.Append("refreshToken", cookieToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(7) //TODO -> equal to the expiration value of the jwtRefresh
-        });
+        if (string.IsNullOrWhiteSpace(cookieToken)) await BuildRefreshCookie(user);
 
         return new AuthenticationResponseDTO()
         {
             Token = token,
             Expiration = expiration
         };
+    }
+
+    private async Task BuildRefreshCookie(IdentityUser user)
+    {
+        var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
+        var jwtRefreshExpiration = Convert.ToDouble(configuration["Jwt:RefreshExpiration"]);
+
+        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(jwtRefreshExpiration)
+        });
     }
 
 }
