@@ -1,9 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using AuthApi.DTOs;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthApi.Controllers;
@@ -17,7 +16,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Register(UserCredentialsDTO credentialsDTO)
     {
-        if (credentialsDTO.Password == null) return IncorrectLoginReturn();
+        if (credentialsDTO.Password == null) return IncorrectReturn("Incorrect register");
 
         var user = new IdentityUser
         {
@@ -28,7 +27,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (result.Succeeded)
         {
-            return await BuildToken(credentialsDTO);
+            return await BuildToken(user.Email);
         }
         else
         {
@@ -45,45 +44,72 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Login(UserCredentialsDTO credentialsDTO)
     {
-        if (credentialsDTO.Password == null) return IncorrectLoginReturn();
+        var errorMessage = "Incorrect login";
+        if (credentialsDTO.Password == null) return IncorrectReturn(errorMessage);
 
         var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
 
-        if (user is null) return IncorrectLoginReturn();
+        if (user is null || string.IsNullOrEmpty(user.Email)) return IncorrectReturn(errorMessage);
 
         var result = await signInManager.CheckPasswordSignInAsync(user, credentialsDTO.Password, lockoutOnFailure: false);
 
         if (result.Succeeded)
         {
-            return await BuildToken(credentialsDTO);
+            return await BuildToken(user.Email);
         }
         else
         {
-            return IncorrectLoginReturn();
+            return IncorrectReturn(errorMessage);
         }
     }
 
-    private ActionResult IncorrectLoginReturn()
+    [HttpGet("refresh-token")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthenticationResponseDTO>> RefreshToken()
     {
-        ModelState.AddModelError(string.Empty, "Incorrect login");
+        var refreshToken = Request.Cookies["refreshToken"];
+
+        if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn("Bad request.");
+
+        var claims = jWTService.GetClaims(refreshToken);
+        var email = claims.FindFirstValue(ClaimTypes.Email);
+
+        if (string.IsNullOrEmpty(email)) return IncorrectReturn("Bad request.");
+
+        var user = await userManager.FindByEmailAsync(email);
+
+        if (user?.Email is null) return Unauthorized();
+
+        return await BuildToken(email: user.Email, cookieToken: refreshToken);
+    }
+
+
+    private ActionResult IncorrectReturn(string message)
+    {
+        ModelState.AddModelError(string.Empty, message);
         return ValidationProblem();
     }
 
-    private async Task<AuthenticationResponseDTO> BuildToken(UserCredentialsDTO userCredentials, double minutes = 10080)
+    private async Task<AuthenticationResponseDTO> BuildToken(string email, double minutes = 10080, string? cookieToken = null)
     {
-        var user = await userManager.FindByEmailAsync(userCredentials.Email);
+        var user = await userManager.FindByEmailAsync(email);
 
         if (user == null) return new AuthenticationResponseDTO() { Token = null };
 
         var (token, expiration) = await jWTService.GenerateToken(user);
-        var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
 
-        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        if (string.IsNullOrWhiteSpace(cookieToken))
+        {
+            var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
+            cookieToken = refreshToken;
+        }
+
+        Response.Cookies.Append("refreshToken", cookieToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(7)
+            Expires = DateTime.UtcNow.AddDays(7) //TODO -> equal to the expiration value of the jwtRefresh
         });
 
         return new AuthenticationResponseDTO()
