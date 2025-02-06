@@ -26,6 +26,37 @@ public class JwtService(IConfiguration configuration, UserManager<IdentityUser> 
         return buildToken;
     }
 
+    public ClaimsPrincipal GetClaims(string token)
+    {
+        if (jwtKey is null) throw new Exception("JWTKey is null. Please provide a valid JWTKey.");
+
+        try
+        {
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ClockSkew = TimeSpan.Zero,
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            ClaimsPrincipal principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+
+            return principal;
+        }
+        catch (SecurityTokenException ex)
+        {
+            throw new Exception("Invalid token.", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Error validating token.", ex);
+        }
+    }
+
     private async Task<(string Token, DateTime Expiration)> BuildToken(IdentityUser user, double minutes)
     {
         if (jwtKey is null) throw new Exception("JWTKey is null. Please provide a valid JWT key.");
