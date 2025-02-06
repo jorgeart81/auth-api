@@ -3,6 +3,7 @@ using AuthApi.DTOs;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthApi.Controllers;
@@ -74,12 +75,21 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (user == null) return new AuthenticationResponseDTO() { Token = null };
 
-        var (Token, Expiration) = await jWTService.GenerateToken(user);
+        var (token, expiration) = await jWTService.GenerateToken(user);
+        var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
+
+        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(7)
+        });
 
         return new AuthenticationResponseDTO()
         {
-            Token = new JwtSecurityTokenHandler().WriteToken(Token),
-            Expiration = Expiration
+            Token = token,
+            Expiration = expiration
         };
     }
 

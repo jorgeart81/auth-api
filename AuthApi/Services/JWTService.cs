@@ -9,16 +9,24 @@ namespace AuthApi.Services;
 public class JWTService(IConfiguration configuration, UserManager<IdentityUser> userManager) : IJWTService
 {
     private readonly string? jwtKey = configuration["JWTKey"];
-    private const double jwtExpiration = 10080;
+    private const double jwtExpiration = 30; // minutes
+    private const double jwtRefreshExpiration = 10080; // 7 days
 
-    public async Task<(JwtSecurityToken Token, DateTime Expiration)> GenerateToken(IdentityUser user)
+    public async Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user)
     {
         var buildToken = await BuildToken(user, jwtExpiration);
 
         return buildToken;
     }
 
-    private async Task<(JwtSecurityToken Token, DateTime Expiration)> BuildToken(IdentityUser user, double minutes)
+    public async Task<(string RefreshToken, DateTime Expiration)> GenerateRefreshToken(IdentityUser user)
+    {
+        var buildToken = await BuildToken(user, jwtRefreshExpiration);
+
+        return buildToken;
+    }
+
+    private async Task<(string Token, DateTime Expiration)> BuildToken(IdentityUser user, double minutes)
     {
         if (jwtKey is null) throw new Exception("JWTKey is null. Please provide a valid JWT key.");
 
@@ -40,6 +48,6 @@ public class JWTService(IConfiguration configuration, UserManager<IdentityUser> 
 
         var securityToken = new JwtSecurityToken(issuer: null, audience: null, claims: claims, notBefore: notBefore, expires: expiration, signingCredentials: creds);
 
-        return (securityToken, expiration);
+        return (new JwtSecurityTokenHandler().WriteToken(securityToken), expiration);
     }
 }
