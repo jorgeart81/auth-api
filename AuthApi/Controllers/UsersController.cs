@@ -69,19 +69,12 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult<AuthenticationResponseDTO>> RefreshToken()
     {
         var refreshToken = Request.Cookies["refreshToken"];
-
         if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn("Bad request.");
 
-        var claims = jWTService.GetClaims(refreshToken);
-        var email = claims.FindFirstValue(ClaimTypes.Email);
-
+        var email = await jWTService.GetEmailFromToken(refreshToken);
         if (string.IsNullOrEmpty(email)) return IncorrectReturn("Bad request.");
 
-        var user = await userManager.FindByEmailAsync(email);
-
-        if (user?.Email is null) return Unauthorized();
-
-        return await BuildAuthenticationResponse(email: user.Email, cookieToken: refreshToken);
+        return await BuildAuthenticationResponse(email: email, cookieToken: refreshToken);
     }
 
 

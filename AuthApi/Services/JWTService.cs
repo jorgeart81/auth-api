@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using AuthApi.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -10,9 +11,9 @@ namespace AuthApi.Services;
 public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basicConfig) : IJwtService
 {
     private readonly JwtDefaultValues jwtDefault = basicConfig.GetJwtDefaultValues();
-    private const string email = "email";
-    private const string securityStamp = "securityStamp";
-    private const string jwtIsNulError = "JWTKey is null. Please provide a valid JWTKey.";
+    private const string EMAIL = "email";
+    private const string SECURITY_STAMP = "securityStamp";
+    private const string JWT_IS_NULL_ERROR = "JWTKey is null. Please provide a valid JWTKey.";
 
     public async Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user)
     {
@@ -28,9 +29,24 @@ public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basi
         return buildToken;
     }
 
+    public async Task<string> GetEmailFromToken(string token)
+    {
+        var claims = GetClaims(token);
+        var emailClaims = claims.FindFirstValue(ClaimTypes.Email);
+        var securityStampClaims = claims.FindFirstValue(SECURITY_STAMP);
+
+        if (string.IsNullOrWhiteSpace(emailClaims) || string.IsNullOrWhiteSpace(securityStampClaims)) throw new Exception("Invalid token.");
+
+        var isValidSecurityStamp = await ValidateSecurityStamp(emailClaims, securityStampClaims);
+
+        if (!isValidSecurityStamp) throw new Exception("Invalid token.");
+
+        return emailClaims;
+    }
+
     public ClaimsPrincipal GetClaims(string token)
     {
-        if (jwtDefault.Key is null) throw new Exception(jwtIsNulError);
+        if (jwtDefault.Key is null) throw new Exception(JWT_IS_NULL_ERROR);
 
         try
         {
@@ -59,16 +75,25 @@ public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basi
         }
     }
 
+    private async Task<bool> ValidateSecurityStamp(string emailClaims, string securityStampClaims)
+    {
+        var user = await userManager.FindByEmailAsync(emailClaims);
+
+        if (user is null) return false;
+
+        return user.SecurityStamp == securityStampClaims;
+    }
+
     private async Task<(string Token, DateTime Expiration)> BuildToken(IdentityUser user, double minutes)
     {
-        if (jwtDefault.Key is null) throw new Exception(jwtIsNulError);
+        if (jwtDefault.Key is null) throw new Exception(JWT_IS_NULL_ERROR);
 
         if (user.Email is null || user.SecurityStamp is null) throw new Exception("User is null.");
 
         var claims = new List<Claim>()
         {
-            new Claim(email, user.Email),
-            new Claim(securityStamp, user.SecurityStamp)
+            new Claim(EMAIL, user.Email),
+            new Claim(SECURITY_STAMP, user.SecurityStamp)
         };
 
         var claimsDb = await userManager.GetClaimsAsync(user);
