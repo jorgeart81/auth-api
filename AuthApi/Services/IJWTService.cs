@@ -5,7 +5,7 @@ namespace AuthApi.Services;
 
 public interface IJwtService
 {
-    public Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user);
-    public Task<(string RefreshToken, DateTime Expiration)> GenerateRefreshToken(IdentityUser user);
-    public ClaimsPrincipal GetClaims(string token);
+    Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user);
+    Task<(string RefreshToken, DateTime Expiration)> GenerateRefreshToken(IdentityUser user);
+    ClaimsPrincipal GetClaims(string token);
 }

@@ -34,6 +34,7 @@ public class Startup(IConfiguration configuration)
 
         services.AddSingleton<IBasicConfig, BasicConfig>();
         services.AddTransient<IJwtService, JwtService>();
+        services.AddTransient<IUserService, UserService>();
 
         services.AddAuthentication().AddJwtBearer(options =>
         {
