@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using AuthApi.Configuration;
 using AuthApi.Data;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Identity;
@@ -19,7 +20,7 @@ public class Startup(IConfiguration configuration)
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            if (defaultConnection != null) options.UseNpgsql(defaultConnection);
+            options.UseNpgsql(defaultConnection);
         }
         );
 
@@ -31,6 +32,7 @@ public class Startup(IConfiguration configuration)
         services.AddScoped<SignInManager<IdentityUser>>();
         services.AddHttpContextAccessor();
 
+        services.AddSingleton<IBasicConfig, BasicConfig>();
         services.AddTransient<IJwtService, JwtService>();
 
         services.AddAuthentication().AddJwtBearer(options =>

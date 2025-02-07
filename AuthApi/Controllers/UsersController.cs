@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AuthApi.Configuration;
 using AuthApi.DTOs;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IJwtService jWTService) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IJwtService jWTService, IBasicConfig basicConfig) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -110,15 +111,8 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     private async Task BuildRefreshCookie(IdentityUser user)
     {
         var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
-        var jwtRefreshExpiration = Convert.ToDouble(configuration["Jwt:RefreshExpiration"]);
 
-        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(jwtRefreshExpiration)
-        });
+        Response.Cookies.Append("refreshToken", refreshToken, basicConfig.GetRefreshCookie());
     }
 
 }
