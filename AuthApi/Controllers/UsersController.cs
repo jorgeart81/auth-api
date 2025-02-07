@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AuthApi.Configuration;
+using AuthApi.Configuration.Values;
 using AuthApi.DTOs;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -75,6 +76,27 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         if (string.IsNullOrEmpty(email)) return IncorrectReturn("Bad request.");
 
         return await BuildAuthenticationResponse(email: email, cookieToken: refreshToken);
+    }
+
+    [HttpPost("make-admin", Name = "makeAdmin")]
+    // [Authorize(Policy = Strings.isAdmin)]
+    public async Task<ActionResult> MakeAdmin(EditClaimDTO editClaimDTO)
+    {
+        var user = await userManager.FindByEmailAsync(editClaimDTO.Email);
+        if (user == null) return BadRequest("The request could not be processed");
+
+        await userManager.AddClaimAsync(user, new Claim(Strings.isAdmin, "true"));
+        return NoContent();
+    }
+
+    [HttpPost("remove-admin", Name = "removeAdmin")]
+    public async Task<ActionResult> RemoveAdmin(EditClaimDTO editClaimDTO)
+    {
+        var user = await userManager.FindByEmailAsync(editClaimDTO.Email);
+        if (user == null) return BadRequest("The request could not be processed");
+
+        await userManager.RemoveClaimAsync(user, new Claim(Strings.isAdmin, "true"));
+        return NoContent();
     }
 
 

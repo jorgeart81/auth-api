@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using AuthApi.Configuration;
+using AuthApi.Configuration.Values;
 using AuthApi.Data;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Identity;
@@ -49,6 +50,12 @@ public class Startup(IConfiguration configuration)
                 ClockSkew = TimeSpan.Zero,
             };
         });
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(Strings.isAdmin, policy => policy.RequireClaim(Strings.isAdmin));
+        }
+        );
     }
 
     public void Configure(IApplicationBuilder app)
