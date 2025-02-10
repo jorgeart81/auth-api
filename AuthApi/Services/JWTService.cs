@@ -10,7 +10,6 @@ namespace AuthApi.Services;
 public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basicConfig) : IJwtService
 {
     private readonly JwtDefaultValues jwtDefault = basicConfig.GetJwtDefaultValues();
-    private const string EMAIL = "email";
     private const string SECURITY_STAMP = "securityStamp";
     private const string JWT_IS_NULL_ERROR = "JWTKey is null. Please provide a valid JWTKey.";
 
@@ -91,19 +90,26 @@ public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basi
 
         var claims = new List<Claim>()
         {
-            new Claim(EMAIL, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(SECURITY_STAMP, user.SecurityStamp)
         };
 
         var claimsDb = await userManager.GetClaimsAsync(user);
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtDefault.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var notBefore = DateTime.UtcNow;
         var expiration = DateTime.UtcNow.AddMinutes(minutes);
 
         claims.AddRange(claimsDb);
 
-        var securityToken = new JwtSecurityToken(issuer: null, audience: null, claims: claims, notBefore: notBefore, expires: expiration, signingCredentials: creds);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = expiration,
+            SigningCredentials = creds,
+        };
+
+        var handler = new JwtSecurityTokenHandler();
+        var securityToken = handler.CreateToken(tokenDescriptor);
 
         return (new JwtSecurityTokenHandler().WriteToken(securityToken), expiration);
     }

@@ -12,7 +12,7 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IJwtService jWTService, IBasicConfig basicConfig) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jWTService, IBasicConfig basicConfig) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
