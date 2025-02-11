@@ -21,7 +21,7 @@ public partial class SecureService : ISecureService
         timeLimitedDataProtector = protector.ToTimeLimitedDataProtector();
     }
 
-    public string EncryptForLimitedTime(string text, EncryptTime encryptTime)
+    public string EncryptForLimitedTime(string text, EncryptLifetime encryptTime)
     {
         long time = (long)encryptTime;
         return timeLimitedDataProtector.Protect(text, TimeSpan.FromMinutes(time));
@@ -30,11 +30,4 @@ public partial class SecureService : ISecureService
     {
         return timeLimitedDataProtector.Unprotect(encryptText);
     }
-}
-
-public enum EncryptTime
-{
-    OneMinute = 1,
-    FiveMinutes = 5,
-    TenMinutes = 10,
 }

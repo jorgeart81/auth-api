@@ -25,18 +25,12 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         };
         var result = await userManager.CreateAsync(user, credentialsDTO.Password);
 
-        if (result.Succeeded)
-        {
-            return await BuildAuthenticationResponse(user.Email);
-        }
+        if (result.Succeeded) return await BuildAuthenticationResponse(user.Email);
+
         else
         {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            return ValidationProblem();
+            var errorsDescription = result.Errors.Select(e => e.Description).ToArray();
+            return IncorrectReturn(errorsDescription);
         }
     }
 
@@ -48,7 +42,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
 
-        if (user is null || string.IsNullOrEmpty(user.Email)) return IncorrectReturn(errorMessage);
+        if (string.IsNullOrEmpty(user?.Email)) return IncorrectReturn([errorMessage]);
 
         var result = await signInManager.CheckPasswordSignInAsync(user, credentialsDTO.Password, lockoutOnFailure: false);
 
@@ -58,7 +52,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         }
         else
         {
-            return IncorrectReturn(errorMessage);
+            return IncorrectReturn([errorMessage]);
         }
     }
 
@@ -67,10 +61,10 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult<AuthenticationResponseDTO>> RefreshToken()
     {
         var refreshToken = Request.Cookies["refreshToken"];
-        if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn("Bad request.");
+        if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn(["Bad request."]);
 
         var email = await secureService.GetEmailFromToken(refreshToken);
-        if (string.IsNullOrEmpty(email)) return IncorrectReturn("Bad request.");
+        if (string.IsNullOrEmpty(email)) return IncorrectReturn(["Bad request."]);
 
         return await BuildAuthenticationResponse(email: email, cookieToken: refreshToken);
     }
@@ -113,7 +107,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         var errorMessage = "The request could not be processed";
         var loginUser = await userService.GetLoginUser();
 
-        if (string.IsNullOrEmpty(loginUser?.Email)) return IncorrectReturn(errorMessage);
+        if (string.IsNullOrEmpty(loginUser?.Email)) return IncorrectReturn([errorMessage]);
 
         var result = await userManager.ChangePasswordAsync(loginUser, changePasswordDTO.CurrentPassword, changePasswordDTO.NewPassword);
 
@@ -124,13 +118,43 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         }
         else
         {
-            return IncorrectReturn(errorMessage);
+            return IncorrectReturn([errorMessage]);
         }
     }
 
-    private ActionResult IncorrectReturn(string message)
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO)
     {
-        ModelState.AddModelError(string.Empty, message);
+        var user = await userManager.FindByEmailAsync(forgotPasswordDTO.Email);
+        if (user?.Email == null) return BadRequest("Invalid email.");
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var resetLink = $"{forgotPasswordDTO.FrontendUrl}?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}";
+
+        //TODO - Simulation: send by email (in production, use an email service)
+        return Ok(new { message = "Password reset link generated.", resetLink });
+    }
+
+    [HttpPost("reset-password", Name = "resetPassword")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDTO resettPasswordDTO)
+    {
+        var user = await userManager.FindByEmailAsync(resettPasswordDTO.Email);
+        if (user == null) return BadRequest("Invalid request.");
+
+        var result = await userManager.ResetPasswordAsync(user, resettPasswordDTO.Token, resettPasswordDTO.NewPassword);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        return Ok(new { message = "Password reset successfully" });
+    }
+
+    private ActionResult IncorrectReturn(string[] errorsDescription)
+    {
+        foreach (var error in errorsDescription)
+        {
+            ModelState.AddModelError(string.Empty, error);
+        }
         return ValidationProblem();
     }
 
