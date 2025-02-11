@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AuthApi.Configuration;
 using AuthApi.Configuration.Values;
 using AuthApi.DTOs;
+using AuthApi.Models;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,18 +19,23 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Register(UserCredentialsDTO credentialsDTO)
     {
-        var user = new IdentityUser
+        var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
+
+        if (user?.Email == credentialsDTO.Email) return IncorrectReturn([new ErrorModel { Key = "Email", Description = $"Unable to register email {credentialsDTO.Email}." }]);
+
+        user = new IdentityUser
         {
             UserName = credentialsDTO.Email,
             Email = credentialsDTO.Email,
         };
+
         var result = await userManager.CreateAsync(user, credentialsDTO.Password);
 
         if (result.Succeeded) return await BuildAuthenticationResponse(user.Email);
 
         else
         {
-            var errorsDescription = result.Errors.Select(e => e.Description).ToArray();
+            var errorsDescription = result.Errors.Select(e => new ErrorModel { Key = e.Code, Description = e.Description }).ToArray();
             return IncorrectReturn(errorsDescription);
         }
     }
@@ -38,11 +44,9 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Login(UserCredentialsDTO credentialsDTO)
     {
-        var errorMessage = "Incorrect login";
-
         var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
 
-        if (string.IsNullOrEmpty(user?.Email)) return IncorrectReturn([errorMessage]);
+        if (string.IsNullOrEmpty(user?.Email)) return IncorrectReturn([new ErrorModel { Key = string.Empty, Description = ErrorMessages.BAD_CREDENTIALS }]);
 
         var result = await signInManager.CheckPasswordSignInAsync(user, credentialsDTO.Password, lockoutOnFailure: false);
 
@@ -52,7 +56,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         }
         else
         {
-            return IncorrectReturn([errorMessage]);
+            return IncorrectReturn([new ErrorModel { Key = string.Empty, Description = ErrorMessages.BAD_CREDENTIALS }]);
         }
     }
 
@@ -61,10 +65,10 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult<AuthenticationResponseDTO>> RefreshToken()
     {
         var refreshToken = Request.Cookies["refreshToken"];
-        if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn(["Bad request."]);
+        if (string.IsNullOrEmpty(refreshToken)) return BadRequest();
 
         var email = await secureService.GetEmailFromToken(refreshToken);
-        if (string.IsNullOrEmpty(email)) return IncorrectReturn(["Bad request."]);
+        if (string.IsNullOrEmpty(email)) return BadRequest();
 
         return await BuildAuthenticationResponse(email: email, cookieToken: refreshToken);
     }
@@ -74,9 +78,9 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult> MakeAdmin(EditClaimDTO editClaimDTO)
     {
         var user = await userManager.FindByEmailAsync(editClaimDTO.Email);
-        if (user == null) return BadRequest("The request could not be processed");
+        if (user == null) return BadRequest(ErrorMessages.ERROR_PROCESSING_REQUEST);
 
-        await userManager.AddClaimAsync(user, new Claim(Strings.isAdmin, "true"));
+        await userManager.AddClaimAsync(user, new Claim(Strings.IS_ADMIN, "true"));
         return NoContent();
     }
 
@@ -84,9 +88,9 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult> RemoveAdmin(EditClaimDTO editClaimDTO)
     {
         var user = await userManager.FindByEmailAsync(editClaimDTO.Email);
-        if (user == null) return BadRequest("The request could not be processed");
+        if (user == null) return BadRequest(ErrorMessages.ERROR_PROCESSING_REQUEST);
 
-        await userManager.RemoveClaimAsync(user, new Claim(Strings.isAdmin, "true"));
+        await userManager.RemoveClaimAsync(user, new Claim(Strings.IS_ADMIN, "true"));
         return NoContent();
     }
 
@@ -94,7 +98,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult> Logout()
     {
         var user = await userService.GetLoginUser();
-        if (user == null) return BadRequest("The request could not be processed");
+        if (user == null) return BadRequest(ErrorMessages.ERROR_PROCESSING_REQUEST);
 
         SetRefreshCookie(Response, basicConfig.GetExpiredRefreshCookie(), "");
         return Ok(new { message = "Logged out successfully." });
@@ -104,10 +108,10 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     [HttpPost("change-password")]
     public async Task<ActionResult> ChangePassword(ChangePasswordDTO changePasswordDTO)
     {
-        var errorMessage = "The request could not be processed";
+        var errorMessage = ErrorMessages.ERROR_PROCESSING_REQUEST;
         var loginUser = await userService.GetLoginUser();
 
-        if (string.IsNullOrEmpty(loginUser?.Email)) return IncorrectReturn([errorMessage]);
+        if (string.IsNullOrEmpty(loginUser?.Email)) return IncorrectReturn([new ErrorModel { Key = string.Empty, Description = errorMessage }]);
 
         var result = await userManager.ChangePasswordAsync(loginUser, changePasswordDTO.CurrentPassword, changePasswordDTO.NewPassword);
 
@@ -118,7 +122,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         }
         else
         {
-            return IncorrectReturn([errorMessage]);
+            return IncorrectReturn([new ErrorModel { Key = string.Empty, Description = errorMessage }]);
         }
     }
 
@@ -127,7 +131,8 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO)
     {
         var user = await userManager.FindByEmailAsync(forgotPasswordDTO.Email);
-        if (user?.Email == null) return BadRequest("Invalid email.");
+
+        if (user?.Email == null) return BadRequest(ErrorMessages.EMAIL_IS_NOT_VALID);
 
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         var resetLink = $"{forgotPasswordDTO.FrontendUrl}?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}";
@@ -141,7 +146,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<IActionResult> ResetPassword(ResetPasswordDTO resettPasswordDTO)
     {
         var user = await userManager.FindByEmailAsync(resettPasswordDTO.Email);
-        if (user == null) return BadRequest("Invalid request.");
+        if (user is null) return BadRequest(ErrorMessages.ERROR_PROCESSING_REQUEST);
 
         var result = await userManager.ResetPasswordAsync(user, resettPasswordDTO.Token, resettPasswordDTO.NewPassword);
         if (!result.Succeeded) return BadRequest(result.Errors);
@@ -149,11 +154,11 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         return Ok(new { message = "Password reset successfully" });
     }
 
-    private ActionResult IncorrectReturn(string[] errorsDescription)
+    private ActionResult IncorrectReturn(ErrorModel[] errors)
     {
-        foreach (var error in errorsDescription)
+        foreach (var error in errors)
         {
-            ModelState.AddModelError(string.Empty, error);
+            ModelState.AddModelError(error.Key, error.Description);
         }
         return ValidationProblem();
     }
@@ -161,8 +166,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     private async Task<AuthenticationResponseDTO> BuildAuthenticationResponse(string email, string? cookieToken = null)
     {
         var user = await userManager.FindByEmailAsync(email);
-
-        if (user == null) return new AuthenticationResponseDTO() { Token = null };
+        if (user is null) return new AuthenticationResponseDTO() { Token = null };
 
         var (token, expiration) = await secureService.GenerateToken(user);
 

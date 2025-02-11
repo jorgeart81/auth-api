@@ -55,7 +55,7 @@ public class Startup(IConfiguration configuration)
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(Strings.isAdmin, policy => policy.RequireClaim(Strings.isAdmin));
+            options.AddPolicy(Strings.IS_ADMIN, policy => policy.RequireClaim(Strings.IS_ADMIN));
         }
         );
     }

@@ -2,5 +2,5 @@ namespace AuthApi.Configuration.Values;
 
 public static class Strings
 {
-    public const string isAdmin = "isAdmin";
+    public const string IS_ADMIN = "isAdmin";
 }
