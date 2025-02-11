@@ -12,7 +12,7 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jWTService, IBasicConfig basicConfig) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jWTService, IBasicConfig basicConfig, IUserService userService) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -99,6 +99,38 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         return NoContent();
     }
 
+    [HttpGet("logout", Name = "logout")]
+    public async Task<ActionResult> Logout()
+    {
+        var user = await userService.GetLoginUser();
+        if (user == null) return BadRequest("The request could not be processed");
+
+        Response.Cookies.Append("refreshToken", "", basicConfig.GetExpiredRefreshCookie());
+        return Ok(new { message = "Logged out successfully." });
+    }
+
+
+    [HttpPost("change-password")]
+    public async Task<ActionResult> ChangePassword(ChangePasswordDTO changePasswordDTO)
+    {
+        var errorMessage = "The request could not be processed";
+        var loginUser = await userService.GetLoginUser();
+
+        if (string.IsNullOrEmpty(loginUser?.Email)) return IncorrectReturn(errorMessage);
+
+        var result = await userManager.ChangePasswordAsync(loginUser, changePasswordDTO.CurrentPassword, changePasswordDTO.NewPassword);
+
+        if (result.Succeeded)
+        {
+            await Logout();
+            return Ok(new { message = "Password changed successfully, logged out." });
+        }
+        else
+        {
+            return IncorrectReturn(errorMessage);
+        }
+
+    }
 
     private ActionResult IncorrectReturn(string message)
     {
@@ -106,7 +138,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         return ValidationProblem();
     }
 
-    private async Task<AuthenticationResponseDTO> BuildAuthenticationResponse(string email, double minutes = 10080, string? cookieToken = null)
+    private async Task<AuthenticationResponseDTO> BuildAuthenticationResponse(string email, string? cookieToken = null)
     {
         var user = await userManager.FindByEmailAsync(email);
 

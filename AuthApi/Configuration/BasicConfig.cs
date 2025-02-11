@@ -13,12 +13,14 @@ public sealed class BasicConfig(IConfiguration configuration) : IBasicConfig
 
     public CookieOptions GetRefreshCookie()
     {
+        var expirationTime = TimeSpan.FromMinutes(_jwtRefreshExpiration);
         return new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddMinutes(_jwtRefreshExpiration)
+            Expires = DateTime.UtcNow.Add(expirationTime),
+            MaxAge = expirationTime,
         };
     }
 
@@ -29,7 +31,8 @@ public sealed class BasicConfig(IConfiguration configuration) : IBasicConfig
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddMinutes(_jwtRefreshExpiration)
+            Expires = DateTime.UtcNow.AddDays(-1),
+            MaxAge = TimeSpan.Zero,
         };
     }
 }

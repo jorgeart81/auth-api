@@ -1,6 +1,5 @@
-using System;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace AuthApi.Services;
 
@@ -9,7 +8,7 @@ public class UserService(UserManager<IdentityUser> userManager, IHttpContextAcce
 
 	public async Task<IdentityUser?> GetLoginUser()
 	{
-		var emailClaim = contextAccessor?.HttpContext?.User.Claims.Where(x => x.Type == ClaimTypes.Email).FirstOrDefault();
+		var emailClaim = contextAccessor?.HttpContext?.User.Claims.Where(x => x.Type == JwtRegisteredClaimNames.Email).FirstOrDefault();
 
 		if (emailClaim is null) return null;
 
