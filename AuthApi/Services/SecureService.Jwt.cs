@@ -1,18 +1,13 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
-using AuthApi.Configuration;
 using Microsoft.AspNetCore.Identity;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AuthApi.Services;
 
-public class JwtService(UserManager<IdentityUser> userManager, IBasicConfig basicConfig) : IJwtService
+public partial class SecureService : IJwtService
 {
-    private readonly JwtDefaultValues jwtDefault = basicConfig.GetJwtDefaultValues();
-    private const string SECURITY_STAMP = "securityStamp";
-    private const string JWT_IS_NULL_ERROR = "JWTKey is null. Please provide a valid JWTKey.";
-
     public async Task<(string Token, DateTime Expiration)> GenerateToken(IdentityUser user)
     {
         var buildToken = await BuildToken(user, jwtDefault.Expiration);

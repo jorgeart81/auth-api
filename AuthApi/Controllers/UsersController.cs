@@ -12,14 +12,12 @@ namespace AuthApi.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jWTService, IBasicConfig basicConfig, IUserService userService) : ControllerBase
+public class UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, ISecureService secureService, IBasicConfig basicConfig, IUserService userService) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthenticationResponseDTO>> Register(UserCredentialsDTO credentialsDTO)
     {
-        if (credentialsDTO.Password == null) return IncorrectReturn("Incorrect register");
-
         var user = new IdentityUser
         {
             UserName = credentialsDTO.Email,
@@ -47,7 +45,6 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
     public async Task<ActionResult<AuthenticationResponseDTO>> Login(UserCredentialsDTO credentialsDTO)
     {
         var errorMessage = "Incorrect login";
-        if (credentialsDTO.Password == null) return IncorrectReturn(errorMessage);
 
         var user = await userManager.FindByEmailAsync(credentialsDTO.Email);
 
@@ -72,7 +69,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         var refreshToken = Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(refreshToken)) return IncorrectReturn("Bad request.");
 
-        var email = await jWTService.GetEmailFromToken(refreshToken);
+        var email = await secureService.GetEmailFromToken(refreshToken);
         if (string.IsNullOrEmpty(email)) return IncorrectReturn("Bad request.");
 
         return await BuildAuthenticationResponse(email: email, cookieToken: refreshToken);
@@ -105,7 +102,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         var user = await userService.GetLoginUser();
         if (user == null) return BadRequest("The request could not be processed");
 
-        Response.Cookies.Append("refreshToken", "", basicConfig.GetExpiredRefreshCookie());
+        SetRefreshCookie(Response, basicConfig.GetExpiredRefreshCookie(), "");
         return Ok(new { message = "Logged out successfully." });
     }
 
@@ -129,7 +126,6 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
         {
             return IncorrectReturn(errorMessage);
         }
-
     }
 
     private ActionResult IncorrectReturn(string message)
@@ -144,7 +140,7 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
         if (user == null) return new AuthenticationResponseDTO() { Token = null };
 
-        var (token, expiration) = await jWTService.GenerateToken(user);
+        var (token, expiration) = await secureService.GenerateToken(user);
 
         if (string.IsNullOrWhiteSpace(cookieToken)) await BuildRefreshCookie(user);
 
@@ -157,9 +153,13 @@ public class UsersController(UserManager<IdentityUser> userManager, SignInManage
 
     private async Task BuildRefreshCookie(IdentityUser user)
     {
-        var (refreshToken, _) = await jWTService.GenerateRefreshToken(user);
+        var (refreshToken, _) = await secureService.GenerateRefreshToken(user);
 
-        Response.Cookies.Append("refreshToken", refreshToken, basicConfig.GetRefreshCookie());
+        SetRefreshCookie(Response, basicConfig.GetRefreshCookie(), refreshToken);
     }
 
+    readonly Action<HttpResponse, CookieOptions, string> SetRefreshCookie = (response, cookieOptions, token) =>
+    {
+        response.Cookies.Append("refreshToken", token, cookieOptions);
+    };
 }

@@ -17,6 +17,8 @@ public class Startup(IConfiguration configuration)
 
     public void ConfigureServices(IServiceCollection services)
     {
+        services.AddDataProtection();
+
         services.AddControllers();
 
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -34,7 +36,7 @@ public class Startup(IConfiguration configuration)
         services.AddHttpContextAccessor();
 
         services.AddSingleton<IBasicConfig, BasicConfig>();
-        services.AddTransient<IJwtService, JwtService>();
+        services.AddTransient<ISecureService, SecureService>();
         services.AddTransient<IUserService, UserService>();
 
         services.AddAuthentication().AddJwtBearer(options =>

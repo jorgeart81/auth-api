@@ -10,5 +10,5 @@ public class UserCredentialsDTO
     public required string Email { get; set; }
 
     [Required]
-    public string? Password { get; set; }
+    public required string Password { get; set; }
 }
