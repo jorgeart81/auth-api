@@ -12,8 +12,8 @@ namespace AuthApi;
 
 public class Startup(IConfiguration configuration)
 {
-    private readonly string? defaultConnection = configuration.GetConnectionString("DefaultConnection");
-    private readonly string jwtKey = configuration["Jwt:Key"] ?? GenerateRandomKey();
+    private readonly string? _dbConnection = configuration.GetValue<string>("DB_CONNECTION_STRING");
+    private readonly string _jwtKey = configuration.GetValue<string>("JWT_SECRET_KEY", GenerateRandomKey());
 
     public void ConfigureServices(IServiceCollection services)
     {
@@ -23,7 +23,7 @@ public class Startup(IConfiguration configuration)
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            options.UseNpgsql(defaultConnection);
+            options.UseNpgsql(_dbConnection);
         }
         );
 
@@ -48,7 +48,7 @@ public class Startup(IConfiguration configuration)
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey)),
                 ClockSkew = TimeSpan.Zero,
             };
         });

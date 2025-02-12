@@ -2,9 +2,9 @@ namespace AuthApi.Configuration;
 
 public sealed class BasicConfig(IConfiguration configuration) : IBasicConfig
 {
-    private readonly string? _jwtKey = configuration["Jwt:Key"];
-    private readonly double _jwtExpiration = Convert.ToDouble(configuration["Jwt:Expiration"]);
-    private readonly double _jwtRefreshExpiration = Convert.ToDouble(configuration["Jwt:RefreshExpiration"]);
+    private readonly string? _jwtKey = configuration.GetValue<string>("JWT_SECRET_KEY");
+    private readonly double _jwtExpiration = Convert.ToDouble(configuration.GetValue<double>("Jwt:Expiration", 30)); // minutes
+    private readonly double _jwtRefreshExpiration = Convert.ToDouble(configuration.GetValue<double>("Jwt:RefreshExpiration", 10080)); // minutes
 
     public JwtDefaultValues GetJwtDefaultValues()
     {
