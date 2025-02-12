@@ -7,6 +7,8 @@ public class ErrorMessages
     public const string BAD_CREDENTIALS = "Bad credentials.";
     public const string EMAIL_IS_NOT_VALID = "Email is not valid.";
     public const string ERROR_PROCESSING_REQUEST = "The request could not be processed.";
+    public const string NEW_PASSWORD_CANNOT_BE_THE_SAME = "Your new password cannot be the same as your current password. Please choose a different one.";
+    public const string PASSWORD_CHANGE_FAILED = "Password change failed: the new password matches the current one.";
 
     public const string UNAUTHORIZED_ACCESS = "Unauthorized access.";
     public const string FORBIDDEN_ACCESS = "Forbidden access.";
