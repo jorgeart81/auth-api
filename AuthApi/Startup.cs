@@ -56,13 +56,17 @@ public class Startup(IConfiguration configuration)
         services.AddAuthorization(options =>
         {
             options.AddPolicy(Strings.IS_ADMIN, policy => policy.RequireClaim(Strings.IS_ADMIN));
-        }
-        );
+        });
+
+        services.AddSwaggerGen();
     }
 
     public void Configure(IApplicationBuilder app)
     {
         // Middlewares
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
         app.UseHttpsRedirection();
         app.UseRouting();
 
