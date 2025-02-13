@@ -7,6 +7,7 @@ using AuthApi.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 namespace AuthApi;
 
@@ -58,7 +59,48 @@ public class Startup(IConfiguration configuration)
             options.AddPolicy(Strings.IS_ADMIN, policy => policy.RequireClaim(Strings.IS_ADMIN));
         });
 
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            {
+                Title = "Auth API",
+                Description = "This is an api with jwt authentication.",
+                Contact = new Microsoft.OpenApi.Models.OpenApiContact
+                {
+                    Email = "hola@jorgereyesdev.com",
+                    Name = "Jorge Reyes",
+                    Url = new Uri("https://jorgereyesdev.com"),
+                },
+                License = new Microsoft.OpenApi.Models.OpenApiLicense
+                {
+                    Name = "MIT",
+                    Url = new Uri("https://opensource.org/license/mit")
+                }
+            });
+
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.ApiKey,
+                Scheme = "Bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header
+            });
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                 Array.Empty<string>()
+                }
+            });
+        });
     }
 
     public void Configure(IApplicationBuilder app)
