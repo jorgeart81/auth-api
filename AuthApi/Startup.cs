@@ -4,6 +4,7 @@ using AuthApi.Configuration;
 using AuthApi.Configuration.Values;
 using AuthApi.Data;
 using AuthApi.Services;
+using AuthApi.Swagger;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -86,20 +87,8 @@ public class Startup(IConfiguration configuration)
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header
             });
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                 Array.Empty<string>()
-                }
-            });
+
+            options.OperationFilter<AuthorizationFilter>();
         });
     }
 
