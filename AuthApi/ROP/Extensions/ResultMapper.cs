@@ -2,7 +2,7 @@ using System;
 using System.Runtime.ExceptionServices;
 using AuthApi.Models;
 
-namespace AuthApi.Extensions;
+namespace AuthApi.ROP.Extensions;
 
 public static class ResultMapper
 {

@@ -2,8 +2,9 @@ using System.Security.Claims;
 using AuthApi.Configuration;
 using AuthApi.Configuration.Values;
 using AuthApi.DTOs;
-using AuthApi.Extensions;
 using AuthApi.Models;
+using AuthApi.ROP;
+using AuthApi.ROP.Extensions;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -171,7 +172,6 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
 
     private async Task<Result<IdentityUser>> GetUserByEmailAsync(string email)
     {
-        List<string> errors = [];
         var user = await userManager.FindByEmailAsync(email);
 
         if (user is null) return Result.Failure<IdentityUser>("User not found.");

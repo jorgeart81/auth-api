@@ -1,12 +1,6 @@
 using System.Collections.Immutable;
 
-namespace AuthApi.Models;
-
-public sealed class Unit
-{
-    public static readonly Unit Value = new Unit();
-    private Unit() { }
-}
+namespace AuthApi.ROP;
 
 public readonly struct Result<T>
 {
@@ -27,10 +21,10 @@ public readonly struct Result<T>
     {
         if (errors.Length == 0)
         {
-            throw new InvalidOperationException("debes indicar al menso un error");
+            throw new InvalidOperationException("You should specify at least one error.");
         }
 
-        Value = default;
+        Value = default(T);
         Errors = errors;
     }
 }

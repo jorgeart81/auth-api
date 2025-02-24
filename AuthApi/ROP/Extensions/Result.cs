@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Immutable;
-using AuthApi.Models;
 
-namespace AuthApi.Extensions;
+namespace AuthApi.ROP.Extensions;
 
-public static class Result
+public static partial class Result
 {
     public static readonly Unit Unit = Unit.Value;
 
-    public static Result<T> Success<T>(this T value) => new(value);
+    public static Result<T> Success<T>(this T value) => new Result<T>(value);
 
     public static Result<T> Failure<T>(ImmutableArray<string> errors) => new(errors);
 
