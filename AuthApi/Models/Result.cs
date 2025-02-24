@@ -1,18 +1,36 @@
+using System.Collections.Immutable;
+
 namespace AuthApi.Models;
 
-public class Result<T>
+public sealed class Unit
 {
-    public T Value { get; }
-    public bool IsSucess { get; }
-    public string? Error { get; }
+    public static readonly Unit Value = new Unit();
+    private Unit() { }
+}
 
-    private Result(T value, bool isSuccess = default, string? error = null)
+public readonly struct Result<T>
+{
+    public readonly T Value;
+
+    public static implicit operator Result<T>(T value) => new Result<T>(value);
+
+    public readonly ImmutableArray<string> Errors;
+    public bool Success => Errors.Length == 0;
+
+    public Result(T value)
     {
         Value = value;
-        IsSucess = isSuccess;
-        Error = error;
+        Errors = [];
     }
 
-    public static Result<T> Success(T value) => new Result<T>(value, true, null);
-    public static Result<T> Failure(string error) => new Result<T>(default, false, error);
+    public Result(ImmutableArray<string> errors)
+    {
+        if (errors.Length == 0)
+        {
+            throw new InvalidOperationException("debes indicar al menso un error");
+        }
+
+        Value = default;
+        Errors = errors;
+    }
 }
