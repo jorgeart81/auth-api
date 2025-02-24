@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Security.Claims;
 using AuthApi.Configuration;
 using AuthApi.Configuration.Values;
@@ -33,19 +34,18 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
         if (userResult.Success)
         {
             if (userResult.Value.Email == credentialsDTO.Email)
-                return BadRequest(ApiResponse<AuthenticationResponseDTO>.Failure([new ErrorDetail { Field = "email", Message = $"Unable to register email {credentialsDTO.Email}." }]));
+                return BadRequest(ApiResponse.Failure([new ErrorDetail { Field = "email", Message = $"Unable to register email {credentialsDTO.Email}." }]));
         }
 
         var result = await userManager.CreateAsync(user, credentialsDTO.Password);
-        if (result.Succeeded)
-            return Created();
+        if (result.Succeeded) return Created();
 
         else
         {
             var errorsDescription = result.Errors.Select(e =>
-                new ErrorDetail { Field = e.Code, Message = e.Description }).ToList();
+                new ErrorDetail { Field = e.Code, Message = e.Description }).ToImmutableArray();
 
-            return BadRequest(ApiResponse<AuthenticationResponseDTO>.Failure(errors: errorsDescription));
+            return BadRequest(ApiResponse.Failure(errorsDescription));
         }
     }
 
@@ -55,29 +55,29 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     {
         var userResult = await GetUserByEmailAsync(credentialsDTO.Email);
         if (!userResult.Success)
-            return Unauthorized(ApiResponse<AuthenticationResponseDTO>.Failure(message: ErrorMessages.BAD_CREDENTIALS));
+            return Unauthorized(ApiResponse.Failure(message: ErrorMessages.BAD_CREDENTIALS));
 
         var user = userResult.Value;
         var checkPassword = await signInManager.CheckPasswordSignInAsync(user, credentialsDTO.Password, lockoutOnFailure: false);
 
         if (checkPassword.Succeeded)
-            return Ok(ApiResponse<AuthenticationResponseDTO>.Success(await BuildAuthenticationResponse(user.Email!)));
+            return Ok(ApiResponse.Success(await BuildAuthenticationResponse(user.Email!)));
 
         else
-            return Unauthorized(ApiResponse<AuthenticationResponseDTO>.Failure(message: ErrorMessages.BAD_CREDENTIALS));
+            return Unauthorized(ApiResponse.Failure(message: ErrorMessages.BAD_CREDENTIALS));
     }
 
     [HttpGet("refresh-token")]
     [AllowAnonymous]
     public async Task<ActionResult> RefreshToken()
     {
-        var refreshToken = Request.Cookies["refreshToken"];
+        string? refreshToken = Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(refreshToken)) return BadRequest();
 
-        var email = await secureService.GetEmailFromToken(refreshToken);
+        string? email = await secureService.GetEmailFromToken(refreshToken);
         if (string.IsNullOrEmpty(email)) return BadRequest();
 
-        return Ok(ApiResponse<AuthenticationResponseDTO>.Success(await BuildAuthenticationResponse(email: email, cookieToken: refreshToken)));
+        return Ok(ApiResponse.Success(await BuildAuthenticationResponse(email: email, cookieToken: refreshToken)));
 
     }
 
@@ -87,7 +87,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     {
         var userResult = await GetUserByEmailAsync(editClaimDTO.Email);
         if (!userResult.Success)
-            return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
+            return BadRequest(ApiResponse.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
 
         await userManager.AddClaimAsync(userResult.Value, new Claim(Strings.IS_ADMIN, "true"));
         return NoContent();
@@ -98,7 +98,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     {
         var userResult = await GetUserByEmailAsync(editClaimDTO.Email);
         if (!userResult.Success)
-            return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
+            return BadRequest(ApiResponse.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
 
         await userManager.RemoveClaimAsync(userResult.Value, new Claim(Strings.IS_ADMIN, "true"));
         return NoContent();
@@ -108,10 +108,10 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<ActionResult> Logout()
     {
         var user = await userService.GetLoginUser();
-        if (user == null) return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
+        if (user == null) return BadRequest(ApiResponse.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
 
         SetRefreshCookie(Response, basicConfig.GetExpiredRefreshCookie(), "");
-        return Ok(ApiResponse<string>.Success(message: "Logged out successfully."));
+        return Ok(ApiResponse.Success("Logged out successfully."));
     }
 
 
@@ -124,18 +124,18 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
         var passwordHasher = new PasswordHasher<IdentityUser>();
         var verifyResult = passwordHasher.VerifyHashedPassword(loginUser, loginUser.PasswordHash, changePasswordDTO.NewPassword);
         if (verifyResult == PasswordVerificationResult.Success)
-            return BadRequest(ApiResponse<AuthenticationResponseDTO>.Failure([new ErrorDetail { Field = "password", Message = ErrorMessages.PASSWORD_CHANGE_FAILED }]));
+            return BadRequest(ApiResponse.Failure([new ErrorDetail { Field = "password", Message = ErrorMessages.PASSWORD_CHANGE_FAILED }]));
 
 
         var result = await userManager.ChangePasswordAsync(loginUser, changePasswordDTO.CurrentPassword, changePasswordDTO.NewPassword);
         if (result.Succeeded)
         {
             await Logout();
-            return Ok(ApiResponse<string>.Success(message: "Password changed successfully, logged out."));
+            return Ok(ApiResponse.Success("Password changed successfully, logged out."));
         }
         else
         {
-            return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
+            return BadRequest(ApiResponse.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
         }
     }
 
@@ -145,7 +145,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     {
         var userResult = await GetUserByEmailAsync(forgotPasswordDTO.Email);
         if (!userResult.Success)
-            return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
+            return BadRequest(ApiResponse.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
 
         var user = userResult.Value;
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
@@ -161,13 +161,13 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     {
         var userResult = await GetUserByEmailAsync(resettPasswordDTO.Email);
         if (!userResult.Success)
-            return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
+            return BadRequest(ApiResponse.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
 
         var user = userResult.Value;
         var result = await userManager.ResetPasswordAsync(user, resettPasswordDTO.Token, resettPasswordDTO.NewPassword);
         if (!result.Succeeded) return BadRequest(result.Errors);
 
-        return Ok(ApiResponse<string>.Success(message: "Password reset successfully."));
+        return Ok(ApiResponse.Success("Password reset successfully."));
     }
 
     private async Task<Result<IdentityUser>> GetUserByEmailAsync(string email)

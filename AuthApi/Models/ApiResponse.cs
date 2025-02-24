@@ -1,40 +1,27 @@
-using System.Text.Json.Serialization;
+using System;
+using System.Collections.Immutable;
+using AuthApi.ROP;
 
 namespace AuthApi.Models;
 
-public class ApiResponse<T>
+public static partial class ApiResponse
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Message { get; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public T? Data { get; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string, List<string>>? Errors { get; }
-
-    private ApiResponse(string? message, T? data, List<ErrorDetail>? errors = null)
+    public static ApiResponse<T> Success<T>(this T data) => new ApiResponse<T>(data);
+    public static ApiResponse<T> Success<T>(this T data, string message) => new ApiResponse<T>(data, message);
+    public static ApiResponse<Unit> Failure(string message) => new ApiResponse<Unit>(message);
+    public static ApiResponse<Unit> Failure(ImmutableArray<ErrorDetail> errors, string? message = null)
     {
-        Message = message;
-        Data = data;
-        Errors = errors != null ? SetErrors(errors) : null;
+        if (errors.Length == 0)
+        {
+            throw new InvalidOperationException("You should specify at least one error.");
+        }
+
+        var errorDetails = SetErrors(errors);
+        return new ApiResponse<Unit>(errorDetails, message);
     }
 
-    public static ApiResponse<T> Success(T data = default, string? message = null) =>
-        new ApiResponse<T>(message: message, data: data, errors: null);
-
-    public static ApiResponse<T> Failure(List<ErrorDetail>? errors = null, string? message = null) =>
-        new ApiResponse<T>(message: message, data: default, errors: errors);
-
-    private readonly Func<List<ErrorDetail>, Dictionary<string, List<string>>> SetErrors = (errors) =>
-         errors.GroupBy(e => e.Field)
-               .ToDictionary(g => g.Key, g => g.Select(e => e.Message).ToList());
+    private static Dictionary<string, ImmutableArray<string>> SetErrors(ImmutableArray<ErrorDetail> errors) =>
+        errors.GroupBy(e => e.Field)
+              .ToDictionary(g => g.Key, g => g.Select(e => e.Message).ToImmutableArray());
 
 }
-
-public class ErrorDetail
-{
-    public required string Field { get; set; }
-    public required string Message { get; set; }
-}
-
