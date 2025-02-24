@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AuthApi.Configuration;
 using AuthApi.Configuration.Values;
 using AuthApi.DTOs;
+using AuthApi.Extensions;
 using AuthApi.Models;
 using AuthApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +29,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
         };
 
         var userResult = await GetUserByEmailAsync(credentialsDTO.Email);
-        if (userResult.IsSucess)
+        if (userResult.Success)
         {
             if (userResult.Value.Email == credentialsDTO.Email)
                 return BadRequest(ApiResponse<AuthenticationResponseDTO>.Failure([new ErrorDetail { Field = "email", Message = $"Unable to register email {credentialsDTO.Email}." }]));
@@ -52,7 +53,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<ActionResult> Login(UserCredentialsDTO credentialsDTO)
     {
         var userResult = await GetUserByEmailAsync(credentialsDTO.Email);
-        if (!userResult.IsSucess)
+        if (!userResult.Success)
             return Unauthorized(ApiResponse<AuthenticationResponseDTO>.Failure(message: ErrorMessages.BAD_CREDENTIALS));
 
         var user = userResult.Value;
@@ -84,7 +85,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<ActionResult> MakeAdmin(EditClaimDTO editClaimDTO)
     {
         var userResult = await GetUserByEmailAsync(editClaimDTO.Email);
-        if (!userResult.IsSucess)
+        if (!userResult.Success)
             return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
 
         await userManager.AddClaimAsync(userResult.Value, new Claim(Strings.IS_ADMIN, "true"));
@@ -95,7 +96,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<ActionResult> RemoveAdmin(EditClaimDTO editClaimDTO)
     {
         var userResult = await GetUserByEmailAsync(editClaimDTO.Email);
-        if (!userResult.IsSucess)
+        if (!userResult.Success)
             return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.ERROR_PROCESSING_REQUEST));
 
         await userManager.RemoveClaimAsync(userResult.Value, new Claim(Strings.IS_ADMIN, "true"));
@@ -142,7 +143,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO)
     {
         var userResult = await GetUserByEmailAsync(forgotPasswordDTO.Email);
-        if (!userResult.IsSucess)
+        if (!userResult.Success)
             return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
 
         var user = userResult.Value;
@@ -158,7 +159,7 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
     public async Task<IActionResult> ResetPassword(ResetPasswordDTO resettPasswordDTO)
     {
         var userResult = await GetUserByEmailAsync(resettPasswordDTO.Email);
-        if (!userResult.IsSucess)
+        if (!userResult.Success)
             return BadRequest(ApiResponse<string>.Failure(message: ErrorMessages.EMAIL_IS_NOT_VALID));
 
         var user = userResult.Value;
@@ -170,12 +171,13 @@ SignInManager<IdentityUser> signInManager, ISecureService secureService,
 
     private async Task<Result<IdentityUser>> GetUserByEmailAsync(string email)
     {
+        List<string> errors = [];
         var user = await userManager.FindByEmailAsync(email);
 
-        if (user is null) return Result<IdentityUser>.Failure("User not found.");
-        if (user.Email is null) return Result<IdentityUser>.Failure("User email not found.");
+        if (user is null) return Result.Failure<IdentityUser>("User not found.");
+        if (user.Email is null) return Result.Failure<IdentityUser>("User email not found.");
 
-        return Result<IdentityUser>.Success(user);
+        return user;
     }
 
     private ActionResult IncorrectReturn(ErrorModel[] errors)
