@@ -2,7 +2,10 @@
 {
     public interface IBasicConfig
     {
-        public JwtDefaultValues GetJwtDefaultValues();
+        string? JwtKey { get; }
+        double JwtExpiration { get; }
+        double JwtRefreshExpiration { get; }
+
         CookieOptions GetRefreshCookie();
         CookieOptions GetExpiredRefreshCookie();
     }

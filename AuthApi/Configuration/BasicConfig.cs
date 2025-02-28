@@ -2,18 +2,15 @@ namespace AuthApi.Configuration;
 
 public sealed class BasicConfig(IConfiguration configuration) : IBasicConfig
 {
-    private readonly string? _jwtKey = configuration.GetValue<string>("JWT_SECRET_KEY");
-    private readonly double _jwtExpiration = Convert.ToDouble(configuration.GetValue<double>("Jwt:Expiration", 30)); // minutes
-    private readonly double _jwtRefreshExpiration = Convert.ToDouble(configuration.GetValue<double>("Jwt:RefreshExpiration", 10080)); // minutes
+    public string? JwtKey => configuration.GetValue<string>("JWT_SECRET_KEY");
 
-    public JwtDefaultValues GetJwtDefaultValues()
-    {
-        return new JwtDefaultValues(Key: _jwtKey, Expiration: _jwtExpiration, RefreshExpiration: _jwtRefreshExpiration);
-    }
+    public double JwtExpiration => Convert.ToDouble(configuration.GetValue<double>("Jwt:Expiration", 30)); // minutes
+
+    public double JwtRefreshExpiration => Convert.ToDouble(configuration.GetValue<double>("Jwt:RefreshExpiration", 10080)); // minutes
 
     public CookieOptions GetRefreshCookie()
     {
-        var expirationTime = TimeSpan.FromMinutes(_jwtRefreshExpiration);
+        var expirationTime = TimeSpan.FromMinutes(JwtRefreshExpiration);
         return new CookieOptions
         {
             HttpOnly = true,

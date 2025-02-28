@@ -8,15 +8,16 @@ public partial class SecureService : ISecureService
 {
     private readonly IDataProtector _protector;
     private readonly ITimeLimitedDataProtector _timeLimitedDataProtector;
-    private readonly JwtDefaultValues _jwtDefault;
+
     private readonly UserManager<IdentityUser> _userManager;
     private const string SECURITY_STAMP = "securityStamp";
     private const string JWT_IS_NULL_ERROR = "JWTKey is null. Please provide a valid JWTKey.";
+    private readonly JwtDefaultValues _jwtDefault;
 
     public SecureService(UserManager<IdentityUser> userManager, IBasicConfig basicConfig, IDataProtectionProvider protectionProvider)
     {
         _userManager = userManager;
-        _jwtDefault = basicConfig.GetJwtDefaultValues();
+        _jwtDefault = new JwtDefaultValues(Key: basicConfig.JwtKey, Expiration: basicConfig.JwtExpiration, RefreshExpiration: basicConfig.JwtRefreshExpiration);
         _protector = protectionProvider.CreateProtector("");
         _timeLimitedDataProtector = _protector.ToTimeLimitedDataProtector();
     }
