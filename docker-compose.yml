@@ -1,5 +1,5 @@
 services:
-  paywatcher:
+  database:
     container_name: auth_db
     image: postgres:15-alpine3.18
     restart: always
@@ -16,3 +16,16 @@ services:
       ports:
           - '${FORWARD_MAILPIT_PORT:-1025}:1025'
           - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - database
+    volumes:
+      - ./pgadmin-data:/var/lib/pgadmin
