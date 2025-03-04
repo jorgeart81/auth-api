@@ -12,7 +12,7 @@ public class License
     [MinLength(2), MaxLength(100)]
     public required string LicenseName { get; set; }
 
-    public int ExamId { get; set; }
+    public Guid ExamId { get; set; }
     public Exam? Exam { get; set; }
     public List<Quiz> Quizzes { get; set; } = [];
 }

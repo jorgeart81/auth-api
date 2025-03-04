@@ -6,7 +6,7 @@ namespace AuthApi.Entities;
 public class Quiz
 {
     [Key]
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
     [MinLength(5), MaxLength(50)]
