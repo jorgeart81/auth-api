@@ -96,7 +96,10 @@ public class Startup(IConfiguration configuration)
     {
         // Middlewares
         app.UseSwagger();
-        app.UseSwaggerUI();
+        app.UseSwaggerUI(options =>
+        {
+            options.EnablePersistAuthorization();
+        });
 
         app.UseHttpsRedirection();
         app.UseRouting();
