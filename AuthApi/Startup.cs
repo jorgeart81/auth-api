@@ -37,6 +37,8 @@ public class Startup(IConfiguration configuration)
         services.AddScoped<SignInManager<IdentityUser>>();
         services.AddHttpContextAccessor();
 
+        services.AddTransient<IApplicationDbSeeder, ApplicationDbSeeder>();
+
         services.AddSingleton<IBasicConfig, BasicConfig>();
         services.AddTransient<ISecureService, SecureService>();
         services.AddTransient<IUserService, UserService>();
@@ -92,6 +94,13 @@ public class Startup(IConfiguration configuration)
         });
     }
 
+    public async Task AddInitializeDatabaseAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
+    {
+        using var scope = serviceProvider.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IApplicationDbSeeder>()
+             .InitializeDatabaseAsync(cancellationToken);
+    }
+
     public void Configure(IApplicationBuilder app)
     {
         // Middlewares
@@ -106,7 +115,6 @@ public class Startup(IConfiguration configuration)
 
         app.UseAuthorization();
         app.UseEndpoints(endpoints => endpoints.MapControllers());
-
     }
 
     private static string GenerateRandomKey()
